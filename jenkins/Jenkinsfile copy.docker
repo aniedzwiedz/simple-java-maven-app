@@ -1,0 +1,71 @@
+pipeline {
+    agent any
+    tools { 
+        maven 'Maven 3.3.9' 
+    }
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+    }
+    environment {
+                DOCKER_REGISTRY_CREDENTIALS = credentials('aniedzwiedz-dockerHub')
+                DOCKER_IMAGE_NAME = 'simple-java-maven-app'
+                DOCKER_IMAGE_TAG = "${env.BUILD_NUMBER}"
+    }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'mvn -B -DskipTests clean package'
+            }
+        }
+        stage('Test') {
+            steps {
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+        stage('Deliver') {
+            steps {
+                sh './jenkins/scripts/deliver.sh'
+            }
+        }
+        
+        stage('Docker Build') {
+            steps {
+                // Build the Docker image using the Dockerfile in your project directory
+                script {
+                    def dockerImage = docker.build("${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}", "-f Dockerfile .")
+                }
+            }
+        }
+        
+        stage('Docker Tag') {
+            steps {
+                script {
+                    // Tag the Docker image with a version and 'latest'
+                    def dockerImage = docker.image("${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}")
+                    dockerImage.tag("${DOCKER_IMAGE_NAME}:latest")
+                }
+            }
+        }
+        
+        stage('Docker Push') {
+            steps {
+                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${DOCKER_REGISTRY_CREDENTIALS}", usernameVariable: 'DOCKER_REGISTRY_USERNAME', passwordVariable: 'DOCKER_REGISTRY_PASSWORD']]) {
+                    sh "docker login -u ${DOCKER_REGISTRY_USERNAME} -p ${DOCKER_REGISTRY_PASSWORD}"
+                }
+                
+                // Push the Docker images to your registry
+                script {
+                    def dockerImage = docker.image("${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}")
+                    dockerImage.push()
+                    dockerImage = docker.image("${DOCKER_IMAGE_NAME}:latest")
+                    dockerImage.push()
+                }
+            }
+        }
+    }
+}
