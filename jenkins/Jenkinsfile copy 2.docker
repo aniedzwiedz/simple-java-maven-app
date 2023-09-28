@@ -1,0 +1,62 @@
+pipeline {
+    agent any
+    tools { 
+        maven 'Maven 3.3.9' 
+    }
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+    }
+    environment {
+        DOCKER_IMAGE_NAME = 'simple-java-maven-app' // Customize this with your desired image name
+        DOCKER_IMAGE_TAG = "${env.BUILD_NUMBER}" // You can use the build number as a tag or customize it
+        DOCKER_REGISTRY_CREDENTIALS = credentials('aniedzwiedz-dockerHub') 
+    }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'mvn -B -DskipTests clean package'
+            }
+        }
+        stage('Test') {
+            steps {
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+        stage('Deliver') {
+            steps {
+                sh './jenkins/scripts/deliver.sh'
+            }
+        }
+        
+         stage('Build and Push Docker Image') {
+            steps {
+                script {
+                    // Build the Docker image
+                    sh "docker build -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ."
+                    
+                    // Authenticate with the Docker registry
+                    withCredentials([usernamePassword(credentialsId: DOCKER_REGISTRY_CREDENTIALS, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh "docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}"
+                    }
+
+                    // Push the Docker image to the registry
+                    sh "docker push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Docker image ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} built and pushed successfully!"
+        }
+        failure {
+            echo "Failed to build and push Docker image."
+        }
+    }
+}

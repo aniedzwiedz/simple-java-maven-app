@@ -1,15 +1,12 @@
 pipeline {
     agent {
+        options {
+    buildDiscarder(logRotator(numToKeepStr: '5'))
+  }
+
         docker {
             image 'maven:3.9.0'
             args '-v /root/.m2:/root/.m2'
-        }
-    
-        environment {
-            // Define environment variables for Docker registry credentials
-            DOCKER_REGISTRY_CREDENTIALS = credentials('your-docker-credentials-id')
-            DOCKER_IMAGE_NAME = 'your-docker-image-name'
-            DOCKER_IMAGE_TAG = "${env.BUILD_NUMBER}" // You can customize the tag as needed
         }
     }
     stages {
@@ -28,30 +25,24 @@ pipeline {
                 }
             }
         }
-        stage('Docker Build') {
+        stage('Build Docker Image') {
             steps {
-                // Build a Docker image from your project
-                sh "docker build -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ."
-            }
-        }
-
-       stage('Docker Tag') {
-            steps {
-                // Tag the Docker image with a version or any desired tag
-                sh "docker tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_NAME}:latest"
-            }
-        }
-        
-        stage('Docker Push') {
-            steps {
-                // Log in to your Docker registry using credentials
-                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${DOCKER_REGISTRY_CREDENTIALS}", usernameVariable: 'DOCKER_REGISTRY_USERNAME', passwordVariable: 'DOCKER_REGISTRY_PASSWORD']]) {
-                    sh "docker login -u ${DOCKER_REGISTRY_USERNAME} -p ${DOCKER_REGISTRY_PASSWORD}"
+                script {
+                    def dockerImage = docker.build("https://hub.docker.com/repositories/aniedzwiedz/simple-java-maven-app:${env.BUILD_NUMBER}")
                 }
-                
-                // Push the Docker image to your registry
-                sh "docker push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
-                sh "docker push ${DOCKER_IMAGE_NAME}:latest"
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    def dockerImage = docker.image("your-docker-registry/your-image-name:${env.BUILD_NUMBER}")
+                    dockerImage.push()
+                }
+            }
+        }
+        stage('Deliver') {
+            steps {
+                sh './jenkins/scripts/deliver.sh'
             }
         }
     }
