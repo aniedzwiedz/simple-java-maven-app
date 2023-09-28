@@ -5,11 +5,12 @@ pipeline {
             args '-v /root/.m2:/root/.m2'
         }
     
-    environment {
-        // Define environment variables for Docker registry credentials
-        DOCKER_REGISTRY_CREDENTIALS = credentials('your-docker-credentials-id')
-        DOCKER_IMAGE_NAME = 'your-docker-image-name'
-        DOCKER_IMAGE_TAG = "${env.BUILD_NUMBER}" // You can customize the tag as needed
+        environment {
+            // Define environment variables for Docker registry credentials
+            DOCKER_REGISTRY_CREDENTIALS = credentials('your-docker-credentials-id')
+            DOCKER_IMAGE_NAME = 'your-docker-image-name'
+            DOCKER_IMAGE_TAG = "${env.BUILD_NUMBER}" // You can customize the tag as needed
+        }
     }
     stages {
         stage('Build') {
