@@ -1,17 +1,16 @@
 pipeline {
-  agent 
-      tools { 
-        maven 'maven_3_latest' 
-        // jdk 'jdk8' 
+    agent any
+    tools { 
+        maven 'Maven 3.3.9' 
     }
-  options {
-    buildDiscarder(logRotator(numToKeepStr: '5'))
-  }
-  environment {
-            DOCKER_REGISTRY_CREDENTIALS = credentials('aniedzwiedz-dockerHub')
-            DOCKER_IMAGE_NAME = 'simple-java-maven-app'
-            DOCKER_IMAGE_TAG = "${env.BUILD_NUMBER}"
-  }
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+    }
+    environment {
+                DOCKER_REGISTRY_CREDENTIALS = credentials('aniedzwiedz-dockerHub')
+                DOCKER_IMAGE_NAME = 'simple-java-maven-app'
+                DOCKER_IMAGE_TAG = "${env.BUILD_NUMBER}"
+    }
     stages {
         stage('Build') {
             steps {
