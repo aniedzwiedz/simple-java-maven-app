@@ -8,7 +8,7 @@ pipeline {
     }
     environment {
         DOCKER_IMAGE_NAME = 'simple-java-maven-app' // Customize this with your desired image name
-        DOCKER_IMAGE_TAG = "${env.BUILD_NUMBER}" // You can use the build number as a tag or customize it
+        DOCKER_IMAGE_TAG = "v${env.BUILD_NUMBER}" // You can use the build number as a tag or customize it
         DOCKER_REGISTRY_CREDENTIALS = credentials('aniedzwiedz-dockerHub') 
     }
     stages {
@@ -33,7 +33,19 @@ pipeline {
             }
         }
         
-        
+                stage('Build and Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry('https://registry-1.docker.io', 'dockerhub_credentials') {
+                        // Build the Docker image
+                        def customImage = docker.build("${IMAGE_NAME}:${TAG}")
+
+                        // Push the Docker image to Docker Hub
+                        customImage.push()
+                    }
+                }
+            }
+        }
         stage('Docker Build') {
             steps {
                 // Build the Docker image using the Dockerfile in your project directory
@@ -67,6 +79,12 @@ pipeline {
                     dockerImage.push()
                 }
             }
+        }
+    }
+
+        post {
+        success {
+            echo 'Docker image built and pushed successfully!'
         }
     }
 }
