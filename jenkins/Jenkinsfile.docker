@@ -33,19 +33,6 @@ pipeline {
             }
         }
         
-                stage('Build and Push Docker Image') {
-            steps {
-                script {
-                    docker.withRegistry('https://registry-1.docker.io', 'dockerhub_credentials') {
-                        // Build the Docker image
-                        def customImage = docker.build("${IMAGE_NAME}:${TAG}")
-
-                        // Push the Docker image to Docker Hub
-                        customImage.push()
-                    }
-                }
-            }
-        }
         stage('Docker Build') {
             steps {
                 // Build the Docker image using the Dockerfile in your project directory
