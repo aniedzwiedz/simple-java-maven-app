@@ -7,7 +7,7 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '5'))
     }
     environment {
-        DOCKER_IMAGE_NAME = 'simple-java-maven-app' // Customize this with your desired image name
+        DOCKER_IMAGE_NAME = '{env.JOB_NAME}' // Customize this with your desired image name
         DOCKER_IMAGE_TAG = "v${env.BUILD_NUMBER}" // You can use the build number as a tag or customize it
         DOCKER_REGISTRY_CREDENTIALS = credentials('aniedzwiedz-dockerHub') 
     }
